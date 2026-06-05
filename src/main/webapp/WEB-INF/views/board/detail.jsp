@@ -144,6 +144,7 @@
 <script>
     var contextPath = "${pageContext.request.contextPath}";
 </script>
-<script src="${pageContext.request.contextPath}/assets/js/comment.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="${pageContext.request.contextPath}/assets/js/comment.js?v=jquery-20260605"></script>
 </body>
 </html>
