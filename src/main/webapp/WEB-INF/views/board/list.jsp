@@ -57,16 +57,32 @@
                                     <td>
                                         <span class="reply-depth" style="--depth:${board.reLevel}"></span>
                                         <c:if test="${board.reLevel > 0}"><span class="reply-badge" aria-label="답글"></span></c:if>
-                                        <a class="title-link ms-1" href="${pageContext.request.contextPath}/board/detail.do?boardId=${board.boardId}&cp=${cpage}&ps=${pagesize}">
-                                            <c:choose>
-                                                <c:when test="${board.title != null && fn:length(board.title) > 28}">
-                                                    <c:out value="${fn:substring(board.title, 0, 28)}..."/>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    <c:out value="${board.title}"/>
-                                                </c:otherwise>
-                                            </c:choose>
-                                        </a>
+                                        <c:choose>
+                                            <c:when test="${board.password == '_DELETED_'}">
+                                                <span class="title-deleted ms-1">
+                                                    <c:choose>
+                                                        <c:when test="${board.title != null && fn:length(board.title) > 28}">
+                                                            <c:out value="${fn:substring(board.title, 0, 28)}..."/>
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            <c:out value="${board.title}"/>
+                                                        </c:otherwise>
+                                                    </c:choose>
+                                                </span>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <a class="title-link ms-1" href="${pageContext.request.contextPath}/board/detail.do?boardId=${board.boardId}&cp=${cpage}&ps=${pagesize}">
+                                                    <c:choose>
+                                                        <c:when test="${board.title != null && fn:length(board.title) > 28}">
+                                                            <c:out value="${fn:substring(board.title, 0, 28)}..."/>
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            <c:out value="${board.title}"/>
+                                                        </c:otherwise>
+                                                    </c:choose>
+                                                </a>
+                                            </c:otherwise>
+                                        </c:choose>
                                     </td>
                                     <td class="text-center"><c:out value="${board.writer}"/></td>
                                     <td class="text-center text-muted">${board.createdAt}</td>

@@ -251,6 +251,12 @@ a {
     text-decoration: underline;
 }
 
+.title-deleted {
+    color: var(--cafe-muted);
+    font-weight: 500;
+    cursor: default;
+}
+
 .meta-pill {
     display: inline-flex;
     align-items: center;
