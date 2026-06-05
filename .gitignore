@@ -3,3 +3,7 @@
 out/
 target/
 build/
+
+/classes/
+/build/
+*.class
