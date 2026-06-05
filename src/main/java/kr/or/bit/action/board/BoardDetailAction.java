@@ -31,9 +31,6 @@ public class BoardDetailAction implements Action {
 
         BoardService service = BoardService.getInstance();
 
-        // 조회수 증가
-        service.addReadCount(boardId);
-
         // 글 내용 조회
         BoardDTO board = service.getContent(boardId);
         if (board == null) {
@@ -41,6 +38,16 @@ public class BoardDetailAction implements Action {
             response.getWriter().print("<script>alert('존재하지 않는 게시글입니다.'); history.back();</script>");
             return null;
         }
+
+        // 삭제 여부 검증
+        if ("_DELETED_".equals(board.getPassword())) {
+            response.setContentType("text/html;charset=UTF-8");
+            response.getWriter().print("<script>alert('삭제된 게시물입니다.'); history.back();</script>");
+            return null;
+        }
+
+        // 조회수 증가
+        service.addReadCount(boardId);
 
         request.setAttribute("boardId", boardId);
         request.setAttribute("cp", cpage);

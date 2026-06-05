@@ -237,13 +237,119 @@ public class BoardDAO {
         }
     }
 
-    // 8. 게시글 삭제 (비밀번호 일증)
+    // 8. 게시글 삭제 (비밀번호 인증 및 논리/물리 삭제 분기 + 상위 논리 삭제 게시글 재귀 정리)
     public int delete(int boardId, String password) {
-        String sql = "delete from jspboard where board_id = ? and password = ?";
-        try (Connection conn = DBConnection.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, boardId);
-            pstmt.setString(2, password);
-            return pstmt.executeUpdate();
+        String selectSql = "select ref, re_step, re_level from jspboard where board_id = ? and password = ?";
+        String checkChildSql = "select re_level from jspboard where ref = ? and re_step > ? order by re_step asc";
+        String deleteSql = "delete from jspboard where board_id = ?";
+        String updateSql = "update jspboard set title = '삭제된 게시물입니다.', content = '삭제된 게시물입니다.', writer = '(삭제됨)', password = '_DELETED_', updated_at = sysdate where board_id = ?";
+
+        try (Connection conn = DBConnection.getConnection()) {
+            conn.setAutoCommit(false);
+            int ref = 0;
+            int reStep = 0;
+            int reLevel = 0;
+            boolean exists = false;
+
+            try {
+                try (PreparedStatement pstmt = conn.prepareStatement(selectSql)) {
+                    pstmt.setInt(1, boardId);
+                    pstmt.setString(2, password);
+                    try (ResultSet rs = pstmt.executeQuery()) {
+                        if (rs.next()) {
+                            ref = rs.getInt("ref");
+                            reStep = rs.getInt("re_step");
+                            reLevel = rs.getInt("re_level");
+                            exists = true;
+                        }
+                    }
+                }
+
+                if (!exists) {
+                    conn.rollback();
+                    return 0; // 패스워드 불일치 또는 미존재
+                }
+
+                boolean hasChild = false;
+                try (PreparedStatement pstmt = conn.prepareStatement(checkChildSql)) {
+                    pstmt.setInt(1, ref);
+                    pstmt.setInt(2, reStep);
+                    pstmt.setMaxRows(1);
+                    try (ResultSet rs = pstmt.executeQuery()) {
+                        if (rs.next()) {
+                            int nextReLevel = rs.getInt("re_level");
+                            if (nextReLevel > reLevel) {
+                                hasChild = true;
+                            }
+                        }
+                    }
+                }
+
+                int result = 0;
+                if (hasChild) {
+                    try (PreparedStatement pstmt = conn.prepareStatement(updateSql)) {
+                        pstmt.setInt(1, boardId);
+                        result = pstmt.executeUpdate();
+                    }
+                } else {
+                    try (PreparedStatement pstmt = conn.prepareStatement(deleteSql)) {
+                        pstmt.setInt(1, boardId);
+                        result = pstmt.executeUpdate();
+                    }
+                }
+
+                // 하위 답글이 없는 논리 삭제된 부모 글들의 재귀적 물리 삭제 처리
+                boolean cleaned;
+                do {
+                    cleaned = false;
+                    String findDeletedSql = "select board_id, re_step, re_level from jspboard where ref = ? and password = '_DELETED_'";
+                    List<BoardDTO> deletedPosts = new ArrayList<>();
+                    try (PreparedStatement pstmt = conn.prepareStatement(findDeletedSql)) {
+                        pstmt.setInt(1, ref);
+                        try (ResultSet rs = pstmt.executeQuery()) {
+                            while (rs.next()) {
+                                BoardDTO p = new BoardDTO();
+                                p.setBoardId(rs.getInt("board_id"));
+                                p.setReStep(rs.getInt("re_step"));
+                                p.setReLevel(rs.getInt("re_level"));
+                                deletedPosts.add(p);
+                            }
+                        }
+                    }
+
+                    for (BoardDTO p : deletedPosts) {
+                        boolean hasDescendant = false;
+                        try (PreparedStatement pstmt = conn.prepareStatement(checkChildSql)) {
+                            pstmt.setInt(1, ref);
+                            pstmt.setInt(2, p.getReStep());
+                            pstmt.setMaxRows(1);
+                            try (ResultSet rs = pstmt.executeQuery()) {
+                                if (rs.next()) {
+                                    int nextReLevel = rs.getInt("re_level");
+                                    if (nextReLevel > p.getReLevel()) {
+                                        hasDescendant = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (!hasDescendant) {
+                            try (PreparedStatement pstmt = conn.prepareStatement(deleteSql)) {
+                                pstmt.setInt(1, p.getBoardId());
+                                pstmt.executeUpdate();
+                            }
+                            cleaned = true;
+                            break;
+                        }
+                    }
+                } while (cleaned);
+
+                conn.commit();
+                return result;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
         } catch (SQLException e) {
             e.printStackTrace();
             return 0;

@@ -32,6 +32,12 @@ public class BoardModifyFormAction implements Action {
             return null;
         }
 
+        if ("_DELETED_".equals(board.getPassword())) {
+            response.setContentType("text/html;charset=UTF-8");
+            response.getWriter().print("<script>alert('삭제된 게시물입니다.'); history.back();</script>");
+            return null;
+        }
+
         request.setAttribute("boardId", boardId);
         request.setAttribute("cp", cpage);
         request.setAttribute("ps", pagesize);
