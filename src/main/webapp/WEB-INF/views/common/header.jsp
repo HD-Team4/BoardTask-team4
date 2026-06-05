@@ -18,7 +18,7 @@
     </nav>
     <div class="container hero-copy">
         <span class="eyebrow">Servlet MVC Board</span>
-        <h1>게시글, 답글, 댓글을 한 화면에서 관리합니다.</h1>
-        <p>기존 JSP 흐름을 유지하면서 Bootstrap 기반의 반응형 UI를 미리 세팅했습니다.</p>
+        <h1>게시글, 댓글, 답글을 한 화면에서 관리합니다.</h1>
+        <p>기존 JSP 흐름을 유지하면서 Bootstrap 기반 반응형 UI를 적용했습니다.</p>
     </div>
 </header>
