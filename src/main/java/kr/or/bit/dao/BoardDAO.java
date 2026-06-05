@@ -4,59 +4,80 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-
-import javax.naming.Context;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
-import javax.sql.DataSource;
-
-import jakarta.servlet.http.HttpServletRequest;
 import kr.or.bit.dto.BoardDTO;
-import kr.or.bit.dto.CommentDTO;
+import kr.or.bit.utils.DBConnection;
 
 public class BoardDAO {
-    private final DataSource ds;
 
-    public BoardDAO() throws NamingException {
-        Context context = new InitialContext();
-        ds = (DataSource) context.lookup("java:comp/env/jdbc/oracle");
-    }
+    public BoardDAO() {
+        // 테이블 자동 이관/초기화 감지 코드
+        try (Connection conn = DBConnection.getConnection()) {
+            boolean rebuildNeeded = false;
+            try (PreparedStatement pstmt = conn.prepareStatement("select board_id from jspboard where 1=0")) {
+                pstmt.executeQuery();
+            } catch (SQLException e) {
+                rebuildNeeded = true;
+            }
 
-    public int writeok(BoardDTO boarddata) {
-        String sql = "insert into jspboard(idx, writer, pwd, subject, content, email, homepage, writedate, readnum, filename, filesize, refer) "
-                + "values(jspboard_idx.nextval,?,?,?,?,?,?,sysdate,0,?,0,?)";
-        try (Connection conn = ds.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, boarddata.getWriter());
-            pstmt.setString(2, boarddata.getPwd());
-            pstmt.setString(3, boarddata.getSubject());
-            pstmt.setString(4, boarddata.getContent());
-            pstmt.setString(5, boarddata.getEmail());
-            pstmt.setString(6, boarddata.getHomepage());
-            pstmt.setString(7, boarddata.getFilename());
-            pstmt.setInt(8, getMaxRefer(conn) + 1);
-            return pstmt.executeUpdate();
+            if (rebuildNeeded) {
+                System.out.println("Tomcat Board App: Rebuilding database tables to match the new DTO/schema requirements...");
+                try (Statement stmt = conn.createStatement()) {
+                    try { stmt.execute("DROP TABLE reply CASCADE CONSTRAINTS"); } catch (Exception ignored) {}
+                    try { stmt.execute("DROP TABLE jspboard CASCADE CONSTRAINTS"); } catch (Exception ignored) {}
+                    try { stmt.execute("DROP SEQUENCE seq_jspboard_id"); } catch (Exception ignored) {}
+                    try { stmt.execute("DROP SEQUENCE seq_reply_id"); } catch (Exception ignored) {}
+
+                    stmt.execute("CREATE TABLE jspboard (" +
+                                 "    board_id NUMBER PRIMARY KEY," +
+                                 "    writer VARCHAR2(50) NOT NULL," +
+                                 "    password VARCHAR2(50) NOT NULL," +
+                                 "    title VARCHAR2(200) NOT NULL," +
+                                 "    content VARCHAR2(4000) NOT NULL," +
+                                 "    read_count NUMBER DEFAULT 0," +
+                                 "    ref NUMBER DEFAULT 0," +
+                                 "    re_step NUMBER DEFAULT 0," +
+                                 "    re_level NUMBER DEFAULT 0," +
+                                 "    created_at DATE DEFAULT SYSDATE," +
+                                 "    updated_at DATE DEFAULT SYSDATE" +
+                                 ")");
+
+                    stmt.execute("CREATE SEQUENCE seq_jspboard_id START WITH 1 INCREMENT BY 1 NOCACHE");
+
+                    stmt.execute("CREATE TABLE reply (" +
+                                 "    comment_id NUMBER PRIMARY KEY," +
+                                 "    board_id NUMBER NOT NULL," +
+                                 "    writer VARCHAR2(50) NOT NULL," +
+                                 "    password VARCHAR2(50) NOT NULL," +
+                                 "    content VARCHAR2(1000) NOT NULL," +
+                                 "    created_at DATE DEFAULT SYSDATE," +
+                                 "    updated_at DATE DEFAULT SYSDATE," +
+                                 "    CONSTRAINT fk_jspboard_board_id FOREIGN KEY (board_id) REFERENCES jspboard(board_id) ON DELETE CASCADE" +
+                                 ")");
+
+                    stmt.execute("CREATE SEQUENCE seq_reply_id START WITH 1 INCREMENT BY 1 NOCACHE");
+                    System.out.println("Tomcat Board App: Database schema successfully initialized.");
+                }
+            }
         } catch (SQLException e) {
             e.printStackTrace();
-            return 0;
         }
     }
 
-    private int getMaxRefer(Connection conn) throws SQLException {
-        try (PreparedStatement pstmt = conn.prepareStatement("select nvl(max(refer),0) from jspboard");
-             ResultSet rs = pstmt.executeQuery()) {
-            return rs.next() ? rs.getInt(1) : 0;
-        }
-    }
-
+    // 1. 게시글 목록 조회 (페이징 + 계층 정렬)
     public List<BoardDTO> list(int cpage, int pagesize) {
         int start = cpage * pagesize - (pagesize - 1);
         int end = cpage * pagesize;
-        String sql = "select * from (select rownum rn, b.* from "
-                + "(select * from jspboard order by refer desc, step asc) b where rownum <= ?) where rn >= ?";
+        String sql = "select * from (select rownum rn, b.* from " +
+                "(select board_id, writer, password, title, content, read_count, ref, re_step, re_level, " +
+                "to_char(created_at, 'yyyy-mm-dd hh24:mi:ss') created_at, " +
+                "to_char(updated_at, 'yyyy-mm-dd hh24:mi:ss') updated_at from jspboard " +
+                "order by ref desc, re_step asc) b where rownum <= ?) where rn >= ?";
+
         List<BoardDTO> list = new ArrayList<>();
-        try (Connection conn = ds.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DBConnection.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, end);
             pstmt.setInt(2, start);
             try (ResultSet rs = pstmt.executeQuery()) {
@@ -70,9 +91,11 @@ public class BoardDAO {
         return list;
     }
 
+    // 2. 전체 게시글 개수 조회
     public int totalBoardCount() {
-        try (Connection conn = ds.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement("select count(*) cnt from jspboard");
+        String sql = "select count(*) cnt from jspboard";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
              ResultSet rs = pstmt.executeQuery()) {
             return rs.next() ? rs.getInt("cnt") : 0;
         } catch (SQLException e) {
@@ -81,9 +104,101 @@ public class BoardDAO {
         }
     }
 
-    public BoardDTO getContent(int idx) {
-        try (Connection conn = ds.getConnection(); PreparedStatement pstmt = conn.prepareStatement("select * from jspboard where idx=?")) {
-            pstmt.setInt(1, idx);
+    // 3. 원글 쓰기
+    public int write(BoardDTO board) {
+        String seqSql = "select seq_jspboard_id.nextval from dual";
+        String insertSql = "insert into jspboard(board_id, writer, password, title, content, ref, re_step, re_level) " +
+                "values(?, ?, ?, ?, ?, ?, 0, 0)";
+
+        try (Connection conn = DBConnection.getConnection()) {
+            int nextId = 0;
+            try (PreparedStatement pstmt = conn.prepareStatement(seqSql);
+                 ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    nextId = rs.getInt(1);
+                }
+            }
+
+            if (nextId == 0) return 0;
+
+            try (PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
+                pstmt.setInt(1, nextId);
+                pstmt.setString(2, board.getWriter());
+                pstmt.setString(3, board.getPassword());
+                pstmt.setString(4, board.getTitle());
+                pstmt.setString(5, board.getContent());
+                pstmt.setInt(6, nextId); // ref = board_id
+                return pstmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+    // 4. 답글 쓰기
+    public int reply(int parentId, BoardDTO child) {
+        String selectSql = "select ref, re_step, re_level from jspboard where board_id = ?";
+        String updateSql = "update jspboard set re_step = re_step + 1 where ref = ? and re_step > ?";
+        String insertSql = "insert into jspboard(board_id, writer, password, title, content, ref, re_step, re_level) " +
+                "values(seq_jspboard_id.nextval, ?, ?, ?, ?, ?, ?, ?)";
+
+        try (Connection conn = DBConnection.getConnection()) {
+            conn.setAutoCommit(false);
+            int ref = 0;
+            int reStep = 0;
+            int reLevel = 0;
+
+            try (PreparedStatement pstmt = conn.prepareStatement(selectSql)) {
+                pstmt.setInt(1, parentId);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        ref = rs.getInt("ref");
+                        reStep = rs.getInt("re_step");
+                        reLevel = rs.getInt("re_level");
+                    } else {
+                        conn.rollback();
+                        return 0;
+                    }
+                }
+            }
+
+            // 부모 아래의 다른 답글들의 순서를 뒤로 미룸
+            try (PreparedStatement pstmt = conn.prepareStatement(updateSql)) {
+                pstmt.setInt(1, ref);
+                pstmt.setInt(2, reStep);
+                pstmt.executeUpdate();
+            }
+
+            // 새 답글 등록
+            try (PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
+                pstmt.setString(1, child.getWriter());
+                pstmt.setString(2, child.getPassword());
+                pstmt.setString(3, child.getTitle());
+                pstmt.setString(4, child.getContent());
+                pstmt.setInt(5, ref);
+                pstmt.setInt(6, reStep + 1);
+                pstmt.setInt(7, reLevel + 1);
+                int row = pstmt.executeUpdate();
+                conn.commit();
+                return row;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+    // 5. 게시글 상세 조회
+    public BoardDTO getContent(int boardId) {
+        String sql = "select board_id, writer, password, title, content, read_count, ref, re_step, re_level, " +
+                "to_char(created_at, 'yyyy-mm-dd hh24:mi:ss') created_at, " +
+                "to_char(updated_at, 'yyyy-mm-dd hh24:mi:ss') updated_at from jspboard where board_id = ?";
+        try (Connection conn = DBConnection.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, boardId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 return rs.next() ? mapBoard(rs) : null;
             }
@@ -93,9 +208,11 @@ public class BoardDAO {
         }
     }
 
-    public boolean getReadNum(String idx) {
-        try (Connection conn = ds.getConnection(); PreparedStatement pstmt = conn.prepareStatement("update jspboard set readnum = readnum + 1 where idx=?")) {
-            pstmt.setString(1, idx);
+    // 6. 조회물 증가
+    public boolean addReadCount(int boardId) {
+        String sql = "update jspboard set read_count = read_count + 1 where board_id = ?";
+        try (Connection conn = DBConnection.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, boardId);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -103,45 +220,16 @@ public class BoardDAO {
         }
     }
 
-    public int deleteOk(String idx, String pwd) {
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            if (!matchesPassword(conn, idx, pwd)) {
-                conn.rollback();
-                return 0;
-            }
-            try (PreparedStatement replyDelete = conn.prepareStatement("delete from reply where idx_fk=?");
-                 PreparedStatement boardDelete = conn.prepareStatement("delete from jspboard where idx=?")) {
-                replyDelete.setString(1, idx);
-                replyDelete.executeUpdate();
-                boardDelete.setString(1, idx);
-                int row = boardDelete.executeUpdate();
-                conn.commit();
-                return row;
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return 0;
-        }
-    }
-
-    private boolean matchesPassword(Connection conn, String idx, String pwd) throws SQLException {
-        try (PreparedStatement pstmt = conn.prepareStatement("select pwd from jspboard where idx=?")) {
-            pstmt.setString(1, idx);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                return rs.next() && rs.getString("pwd").equals(pwd);
-            }
-        }
-    }
-
-    public int replywrite(int idx_fk, String writer, String userid, String content, String pwd) {
-        String sql = "insert into reply(no, writer, userid, content, pwd, idx_fk) values(reply_no.nextval,?,?,?,?,?)";
-        try (Connection conn = ds.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, writer);
-            pstmt.setString(2, userid);
-            pstmt.setString(3, content);
-            pstmt.setString(4, pwd);
-            pstmt.setInt(5, idx_fk);
+    // 7. 게시글 수정
+    public int modify(BoardDTO board) {
+        String sql = "update jspboard set title = ?, content = ?, writer = ?, updated_at = sysdate " +
+                "where board_id = ? and password = ?";
+        try (Connection conn = DBConnection.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, board.getTitle());
+            pstmt.setString(2, board.getContent());
+            pstmt.setString(3, board.getWriter());
+            pstmt.setInt(4, board.getBoardId());
+            pstmt.setString(5, board.getPassword());
             return pstmt.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -149,139 +237,47 @@ public class BoardDAO {
         }
     }
 
-    public List<CommentDTO> replylist(String idx_fk) {
-        List<CommentDTO> list = new ArrayList<>();
-        try (Connection conn = ds.getConnection(); PreparedStatement pstmt = conn.prepareStatement("select * from reply where idx_fk=? order by no desc")) {
-            pstmt.setString(1, idx_fk);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    list.add(new CommentDTO(
-                            rs.getInt("no"),
-                            rs.getString("writer"),
-                            rs.getString("userid"),
-                            rs.getString("pwd"),
-                            rs.getString("content"),
-                            rs.getDate("writedate"),
-                            rs.getInt("idx_fk")));
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return list;
-    }
-
-    public int replyDelete(String no, String pwd) {
-        try (Connection conn = ds.getConnection()) {
-            try (PreparedStatement select = conn.prepareStatement("select pwd from reply where no=?")) {
-                select.setString(1, no);
-                try (ResultSet rs = select.executeQuery()) {
-                    if (!rs.next() || !rs.getString("pwd").equals(pwd)) {
-                        return 0;
-                    }
-                }
-            }
-            try (PreparedStatement delete = conn.prepareStatement("delete from reply where no=?")) {
-                delete.setString(1, no);
-                return delete.executeUpdate();
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return 0;
-        }
-    }
-
-    public int reWriteOk(BoardDTO boarddata) {
-        String selectSql = "select refer, depth, step from jspboard where idx=?";
-        String updateSql = "update jspboard set step = step + 1 where step > ? and refer = ?";
-        String insertSql = "insert into jspboard(idx, writer, pwd, subject, content, email, homepage, writedate, readnum, filename, filesize, refer, depth, step) "
-                + "values(jspboard_idx.nextval,?,?,?,?,?,?,sysdate,0,?,0,?,?,?)";
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            int refer;
-            int depth;
-            int step;
-            try (PreparedStatement select = conn.prepareStatement(selectSql)) {
-                select.setInt(1, boarddata.getIdx());
-                try (ResultSet rs = select.executeQuery()) {
-                    if (!rs.next()) {
-                        conn.rollback();
-                        return 0;
-                    }
-                    refer = rs.getInt("refer");
-                    depth = rs.getInt("depth");
-                    step = rs.getInt("step");
-                }
-            }
-            try (PreparedStatement update = conn.prepareStatement(updateSql)) {
-                update.setInt(1, step);
-                update.setInt(2, refer);
-                update.executeUpdate();
-            }
-            try (PreparedStatement insert = conn.prepareStatement(insertSql)) {
-                insert.setString(1, boarddata.getWriter());
-                insert.setString(2, boarddata.getPwd());
-                insert.setString(3, boarddata.getSubject());
-                insert.setString(4, boarddata.getContent());
-                insert.setString(5, boarddata.getEmail());
-                insert.setString(6, boarddata.getHomepage());
-                insert.setString(7, boarddata.getFilename());
-                insert.setInt(8, refer);
-                insert.setInt(9, depth + 1);
-                insert.setInt(10, step + 1);
-                int row = insert.executeUpdate();
-                conn.commit();
-                return row;
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return 0;
-        }
-    }
-
-    public BoardDTO getEditContent(String idx) {
-        try {
-            return getContent(Integer.parseInt(idx));
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    public int boardEdit(HttpServletRequest boarddata) {
-        String idx = boarddata.getParameter("idx");
-        String pwd = boarddata.getParameter("pwd");
-        String sql = "update jspboard set writer=?, email=?, homepage=?, subject=?, content=?, filename=? where idx=? and pwd=?";
-        try (Connection conn = ds.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, boarddata.getParameter("writer"));
-            pstmt.setString(2, boarddata.getParameter("email"));
-            pstmt.setString(3, boarddata.getParameter("homepage"));
-            pstmt.setString(4, boarddata.getParameter("subject"));
-            pstmt.setString(5, boarddata.getParameter("content"));
-            pstmt.setString(6, boarddata.getParameter("filename"));
-            pstmt.setString(7, idx);
-            pstmt.setString(8, pwd);
+    // 8. 게시글 삭제 (비밀번호 일증)
+    public int delete(int boardId, String password) {
+        String sql = "delete from jspboard where board_id = ? and password = ?";
+        try (Connection conn = DBConnection.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, boardId);
+            pstmt.setString(2, password);
             return pstmt.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
             return 0;
+        }
+    }
+
+    // 9. 비밀번호 검증
+    public boolean verifyPassword(int boardId, String password) {
+        String sql = "select count(*) cnt from jspboard where board_id = ? and password = ?";
+        try (Connection conn = DBConnection.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, boardId);
+            pstmt.setString(2, password);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() && rs.getInt("cnt") > 0;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
         }
     }
 
     private BoardDTO mapBoard(ResultSet rs) throws SQLException {
         return new BoardDTO(
-                rs.getInt("idx"),
+                rs.getInt("board_id"),
                 rs.getString("writer"),
-                rs.getString("pwd"),
-                rs.getString("subject"),
+                rs.getString("password"),
+                rs.getString("title"),
                 rs.getString("content"),
-                rs.getDate("writedate"),
-                rs.getInt("readnum"),
-                rs.getString("filename"),
-                rs.getInt("filesize"),
-                rs.getString("homepage"),
-                rs.getString("email"),
-                rs.getInt("refer"),
-                rs.getInt("depth"),
-                rs.getInt("step"));
+                rs.getInt("read_count"),
+                rs.getInt("ref"),
+                rs.getInt("re_step"),
+                rs.getInt("re_level"),
+                rs.getString("created_at"),
+                rs.getString("updated_at")
+        );
     }
 }

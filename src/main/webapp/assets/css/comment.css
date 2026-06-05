@@ -1,4 +1,37 @@
-.comment-list { display: grid; gap: 12px; }
-.comment-item { border: 1px solid #e7e9f0; border-radius: 16px; background: #fff; padding: 14px 16px; }
-.comment-item strong { color: #172033; }
-.comment-item time { color: #667085; font-size: 0.86rem; }
+.comment-list {
+    display: grid;
+    gap: 12px;
+}
+
+.comment-item {
+    border: 1px solid #e7e9f0;
+    border-radius: 16px;
+    background: #fff;
+    padding: 16px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.comment-item:hover {
+    box-shadow: 0 4px 12px rgba(23, 32, 51, 0.04);
+}
+
+.comment-item strong {
+    color: #172033;
+    font-weight: 700;
+}
+
+.comment-item time {
+    color: #667085;
+    font-size: 0.82rem;
+}
+
+.comment-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.comment-content {
+    margin-top: 8px;
+    color: #344054;
+    line-height: 1.5;
+}

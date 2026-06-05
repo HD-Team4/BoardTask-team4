@@ -1,92 +1,85 @@
 package kr.or.bit.dto;
-import java.util.Date;
-
 
 public class CommentDTO {
-	private int no;
-	private String writer;
-	private String userid;
-	private String pwd;
-	private String content;
-	private Date writedate;
-	private int idx_fk;
-	
-	public CommentDTO() {}
+    private int commentId;
+    private int boardId;
+    private String writer;
+    private String password;
+    private String content;
+    private String createdAt;
+    private String updatedAt;
 
-	public CommentDTO(int no, String writer, String userid, String pwd, String content, Date writedate, int idx_fk) {
-		super();
-		this.no = no;
-		this.writer = writer;
-		this.userid = userid;
-		this.pwd = pwd;
-		this.content = content;
-		this.writedate = writedate;
-		this.idx_fk = idx_fk;
-	}
+    public CommentDTO() {}
 
-	public int getNo() {
-		return no;
-	}
+    public CommentDTO(int commentId, int boardId, String writer, String password, String content, String createdAt, String updatedAt) {
+        this.commentId = commentId;
+        this.boardId = boardId;
+        this.writer = writer;
+        this.password = password;
+        this.content = content;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
 
-	public void setNo(int no) {
-		this.no = no;
-	}
+    public int getCommentId() {
+        return commentId;
+    }
 
-	public String getWriter() {
-		return writer;
-	}
+    public void setCommentId(int commentId) {
+        this.commentId = commentId;
+    }
 
-	public void setWriter(String writer) {
-		this.writer = writer;
-	}
+    public int getBoardId() {
+        return boardId;
+    }
 
-	public String getUserid() {
-		return userid;
-	}
+    public void setBoardId(int boardId) {
+        this.boardId = boardId;
+    }
 
-	public void setUserid(String userid) {
-		this.userid = userid;
-	}
+    public String getWriter() {
+        return writer;
+    }
 
-	public String getPwd() {
-		return pwd;
-	}
+    public void setWriter(String writer) {
+        this.writer = writer;
+    }
 
-	public void setPwd(String pwd) {
-		this.pwd = pwd;
-	}
+    public String getPassword() {
+        return password;
+    }
 
-	public String getContent() {
-		return content;
-	}
+    public void setPassword(String password) {
+        this.password = password;
+    }
 
-	public void setContent(String content) {
-		this.content = content;
-	}
+    public String getContent() {
+        return content;
+    }
 
-	public Date getWritedate() {
-		return writedate;
-	}
+    public void setContent(String content) {
+        this.content = content;
+    }
 
-	public void setWritedate(Date writedate) {
-		this.writedate = writedate;
-	}
+    public String getCreatedAt() {
+        return createdAt;
+    }
 
-	public int getIdx_fk() {
-		return idx_fk;
-	}
+    public void setCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
+    }
 
-	public void setIdx_fk(int idx_fk) {
-		this.idx_fk = idx_fk;
-	}
+    public String getUpdatedAt() {
+        return updatedAt;
+    }
 
-	@Override
-	public String toString() {
-		return "CommentDTO [no=" + no + ", writer=" + writer + ", userid=" + userid + ", pwd=" + pwd + ", content=" + content
-				+ ", writedate=" + writedate + ", idx_fk=" + idx_fk + "]";
-	}
-	
-	
-	
+    public void setUpdatedAt(String updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    @Override
+    public String toString() {
+        return "CommentDTO [commentId=" + commentId + ", boardId=" + boardId + ", writer=" + writer + ", password="
+                + password + ", content=" + content + ", createdAt=" + createdAt + ", updatedAt=" + updatedAt + "]";
+    }
 }
-

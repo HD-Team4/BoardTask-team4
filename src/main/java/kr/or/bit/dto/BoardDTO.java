@@ -1,181 +1,127 @@
 package kr.or.bit.dto;
-import java.util.Date;
 
-public class BoardDTO {  //SELECT * FROM jspboard
-	private int idx;  //jspboard 而щ읆紐낃낵 ?숈씪
-	private String writer;
-	private String pwd;
-	private String subject;
-	private String content;
-	//not null (?꾩닔 ?낅젰)
-	private Date writedate; //default SYSDATE
-	private int readnum;    //default 0
-	
-	private String filename;
-	private int filesize;
-	private String homepage;
-	private String email;
-	//遺媛 ?낅젰 ?ы빆
-	
-	//怨꾩링??(?듦?)
-	private int refer;//湲??臾띠쓬
-	private int depth;//湲???ㅼ뿬?곌린
-	private int step;//湲???쒖꽌
+public class BoardDTO {
+    private int boardId;
+    private String writer;
+    private String password;
+    private String title;
+    private String content;
+    private int readCount;
+    private int ref;
+    private int reStep;
+    private int reLevel;
+    private String createdAt;
+    private String updatedAt;
 
-	public BoardDTO() {}
+    public BoardDTO() {}
 
-	public BoardDTO(int idx, String writer, String pwd, String subject, String content, Date writedate, int readnum,
-			String filename, int filesize, String homepage, String email, int refer, int depth, int step) {
-		super();
-		this.idx = idx;
-		this.writer = writer;
-		this.pwd = pwd;
-		this.subject = subject;
-		this.content = content;
-		this.writedate = writedate;
-		this.readnum = readnum;
-		this.filename = filename;
-		this.filesize = filesize;
-		this.homepage = homepage;
-		this.email = email;
-		this.refer = refer;
-		this.depth = depth;
-		this.step = step;
-	}
+    public BoardDTO(int boardId, String writer, String password, String title, String content, int readCount,
+                    int ref, int reStep, int reLevel, String createdAt, String updatedAt) {
+        this.boardId = boardId;
+        this.writer = writer;
+        this.password = password;
+        this.title = title;
+        this.content = content;
+        this.readCount = readCount;
+        this.ref = ref;
+        this.reStep = reStep;
+        this.reLevel = reLevel;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
 
-	public int getIdx() {
-		return idx;
-	}
+    public int getBoardId() {
+        return boardId;
+    }
 
-	public void setIdx(int idx) {
-		this.idx = idx;
-	}
+    public void setBoardId(int boardId) {
+        this.boardId = boardId;
+    }
 
-	public String getWriter() {
-		return writer;
-	}
+    public String getWriter() {
+        return writer;
+    }
 
-	public void setWriter(String writer) {
-		this.writer = writer;
-	}
+    public void setWriter(String writer) {
+        this.writer = writer;
+    }
 
-	public String getPwd() {
-		return pwd;
-	}
+    public String getPassword() {
+        return password;
+    }
 
-	public void setPwd(String pwd) {
-		this.pwd = pwd;
-	}
+    public void setPassword(String password) {
+        this.password = password;
+    }
 
-	public String getSubject() {
-		return subject;
-	}
+    public String getTitle() {
+        return title;
+    }
 
-	public void setSubject(String subject) {
-		this.subject = subject;
-	}
+    public void setTitle(String title) {
+        this.title = title;
+    }
 
-	public String getContent() {
-		return content;
-	}
+    public String getContent() {
+        return content;
+    }
 
-	public void setContent(String content) {
-		this.content = content;
-	}
+    public void setContent(String content) {
+        this.content = content;
+    }
 
-	public Date getWritedate() {
-		return writedate;
-	}
+    public int getReadCount() {
+        return readCount;
+    }
 
-	public void setWritedate(Date writedate) {
-		this.writedate = writedate;
-	}
+    public void setReadCount(int readCount) {
+        this.readCount = readCount;
+    }
 
-	public int getReadnum() {
-		return readnum;
-	}
+    public int getRef() {
+        return ref;
+    }
 
-	public void setReadnum(int readnum) {
-		this.readnum = readnum;
-	}
+    public void setRef(int ref) {
+        this.ref = ref;
+    }
 
-	public String getFilename() {
-		return filename;
-	}
+    public int getReStep() {
+        return reStep;
+    }
 
-	public void setFilename(String filename) {
-		this.filename = filename;
-	}
+    public void setReStep(int reStep) {
+        this.reStep = reStep;
+    }
 
-	public int getFilesize() {
-		return filesize;
-	}
+    public int getReLevel() {
+        return reLevel;
+    }
 
-	public void setFilesize(int filesize) {
-		this.filesize = filesize;
-	}
+    public void setReLevel(int reLevel) {
+        this.reLevel = reLevel;
+    }
 
-	public String getHomepage() {
-		return homepage;
-	}
+    public String getCreatedAt() {
+        return createdAt;
+    }
 
-	public void setHomepage(String homepage) {
-		this.homepage = homepage;
-	}
+    public void setCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
+    }
 
-	public String getEmail() {
-		return email;
-	}
+    public String getUpdatedAt() {
+        return updatedAt;
+    }
 
-	public void setEmail(String email) {
-		this.email = email;
-	}
+    public void setUpdatedAt(String updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 
-	public int getRefer() {
-		return refer;
-	}
-
-	public void setRefer(int refer) {
-		this.refer = refer;
-	}
-
-	public int getDepth() {
-		return depth;
-	}
-
-	public void setDepth(int depth) {
-		this.depth = depth;
-	}
-
-	public int getStep() {
-		return step;
-	}
-
-	public void setStep(int step) {
-		this.step = step;
-	}
-
-	//?꾩슂???곕씪??援ы쁽
-	@Override
-	public String toString() {
-		return "BoardDTO [idx=" + idx + ", writer=" + writer + ", pwd=" + pwd + ", subject=" + subject + ", content="
-				+ content + ", writedate=" + writedate + ", readnum=" + readnum + ", filename=" + filename
-				+ ", filesize=" + filesize + ", homepage=" + homepage + ", email=" + email + ", refer=" + refer
-				+ ", depth=" + depth + ", step=" + step + "]";
-	}
-	
-	
-	
-	
+    @Override
+    public String toString() {
+        return "BoardDTO [boardId=" + boardId + ", writer=" + writer + ", password=" + password + ", title=" + title
+                + ", content=" + content + ", readCount=" + readCount + ", ref=" + ref + ", reStep=" + reStep
+                + ", reLevel=" + reLevel + ", createdAt=" + createdAt + ", updatedAt=" + updatedAt + "]";
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
