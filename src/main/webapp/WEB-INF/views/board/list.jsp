@@ -56,7 +56,7 @@
                                     <td class="text-center fw-bold text-muted">${board.boardId}</td>
                                     <td>
                                         <span class="reply-depth" style="--depth:${board.reLevel}"></span>
-                                        <c:if test="${board.reLevel > 0}"><span class="reply-badge">↳ 답글</span></c:if>
+                                        <c:if test="${board.reLevel > 0}"><span class="reply-badge" aria-label="답글"></span></c:if>
                                         <a class="title-link ms-1" href="${pageContext.request.contextPath}/board/detail.do?boardId=${board.boardId}&cp=${cpage}&ps=${pagesize}">
                                             <c:choose>
                                                 <c:when test="${board.title != null && fn:length(board.title) > 28}">

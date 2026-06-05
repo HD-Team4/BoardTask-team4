@@ -1,37 +1,75 @@
 .comment-list {
-    display: grid;
-    gap: 12px;
+    display: block;
+    border-top: 1px solid #dfe6e2;
 }
 
 .comment-item {
-    border: 1px solid #e7e9f0;
-    border-radius: 16px;
+    border: 0;
+    border-bottom: 1px solid #ededed;
+    border-radius: 0;
     background: #fff;
-    padding: 16px;
-    transition: transform 0.2s, box-shadow 0.2s;
+    padding: 14px 2px;
+    transition: background 0.15s ease;
 }
 
 .comment-item:hover {
-    box-shadow: 0 4px 12px rgba(23, 32, 51, 0.04);
+    background: #fbfffd;
+    box-shadow: none;
 }
 
 .comment-item strong {
-    color: #172033;
-    font-weight: 700;
+    color: #222;
+    font-size: 0.92rem;
+    font-weight: 800;
 }
 
 .comment-item time {
-    color: #667085;
-    font-size: 0.82rem;
+    color: #999;
+    font-size: 0.78rem;
+}
+
+.comment-content {
+    margin-top: 7px;
+    color: #333;
+    font-size: 0.92rem;
+    line-height: 1.58;
 }
 
 .comment-actions {
     display: flex;
-    gap: 8px;
+    gap: 5px;
 }
 
-.comment-content {
-    margin-top: 8px;
-    color: #344054;
-    line-height: 1.5;
+.comment-actions .btn {
+    min-width: 48px;
+    padding: 0.28rem 0.55rem;
+    border-radius: 0 !important;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+#commentForm .form-control {
+    background: #fff;
+}
+
+#commentContent {
+    min-height: 38px;
+}
+
+#commentList .text-muted,
+#commentList .text-danger {
+    border-bottom: 1px solid #ededed;
+    background: #fff;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .comment-item {
+        padding: 13px 0;
+    }
+
+    .comment-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
 }
